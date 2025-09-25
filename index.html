@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quiz Óptico – V/F com Blocos</title>
+    <link rel="preload" href="assets/bg-loja.png" as="image" />
+    <link rel="preload" href="assets/mascote.png" as="image" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+    <header class="topbar" role="banner">
+        <h1 class="titulo">Tétris Óptico - Verd/Falso</h1>
+        <nav class="nav" aria-label="Navegação principal">
+            <button id="btnComo" class="btn ghost">Como funciona</button>
+            <button id="btnRanking" class="btn ghost">Ranking</button>
+        </nav>
+    </header>
+
+
+    <main id="app" role="main">
+        <section class="hud" aria-live="polite">
+            <button id="btnPause" class="btn ghost">Pausar</button>
+            <div class="hud__item"><strong>Pergunta:</strong> <span id="hudPergunta">1/8</span></div>
+            <div class="hud__item"><strong>Bloco:</strong> <span id="hudBloco">1/5</span></div>
+            <div class="hud__item"><strong>Pontos:</strong> <span id="hudPontos">0</span></div>
+            <div class="hud__item" hidden ><strong>Combo:</strong> <span id="hudCombo">x1</span></div>
+        </section>
+
+
+        <section class="cenario" aria-label="Cenário da loja">
+            <img src="assets/bg-loja.png" alt="Loja de óculos minimalista" class="bg" />
+
+            <div class="test">
+
+                <aside class="mascote" aria-label="Professora">
+                    <img src="assets/mascote.png" alt="Mascote professora" />
+                </aside>
+
+
+                <article class="fala" aria-live="polite">
+                    <p id="textoPergunta">(pergunta aparece aqui)</p>
+                </article>
+            </div>
+
+            <section id="jogo" class="jogo" aria-label="Área de jogo" tabindex="0">
+                <!-- Bloco gerado via JS -->
+                <div class="pista pista--falso" aria-hidden="true"><span>FALSO</span></div>
+                <div class="pista pista--verdadeiro" aria-hidden="true"><span>VERDADEIRO</span></div>
+            </section>
+
+
+            <footer class="controles" aria-label="Controles">
+                <div class="dica-teclado">Use ← para Falso e → para Verdadeiro</div>
+                <div class="controles-mobile">
+                    <small>Mobile: arraste o bloco para o lado</small>
+                </div>
+            </footer>
+        </section>
+    </main>
+
+
+    <!-- Modais simples -->
+    <dialog id="modalComo" class="modal">
+        <h2>Como funciona</h2>
+        <p>Leia a afirmação no bloco que cai. Se for <strong>Verdadeiro</strong>, direcione para a
+            <strong>direita</strong>. Se for <strong>Falso</strong>, para a <strong>esquerda</strong>.
+        </p>
+        <ul>
+            <li>8 perguntas (patologias comuns)</li>
+            <li>5 blocos por pergunta (afirmações diferentes)</li>
+            <li>Pontuação com combo: acertos em sequência valem mais</li>
+        </ul>
+        <form method="dialog"><button class="btn">Fechar</button></form>
+    </dialog>
+
+
+    <dialog id="modalRanking" class="modal">
+        <h2>Ranking da Loja</h2>
+        <ol id="listaRanking" class="ranking"></ol>
+        <form method="dialog"><button class="btn">Fechar</button></form>
+    </dialog>
+
+
+    <dialog id="modalFim" class="modal">
+        <h2>Resultado</h2>
+        <p><strong>Pontos:</strong> <span id="fimPontos">0</span></p>
+        <p><strong>Acertos:</strong> <span id="fimAcertos">0</span> / <span id="fimTotal">0</span></p>
+        <form id="formSalvar" class="salvar">
+            <label for="nomeJogador">Seu nome:</label>
+            <input id="nomeJogador" name="nomeJogador" type="text" required maxlength="24"
+                placeholder="Digite seu nome" />
+            <button class="btn" type="submit">Salvar no ranking</button>
+        </form>
+        <div class="acoes">
+            <button id="btnJogarNovamente" class="btn">Jogar novamente</button>
+        </div>
+    </dialog>
+
+
+    <script src="js/game.js" defer></script>
+</body>
+
+</html>
