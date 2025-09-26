@@ -31,7 +31,6 @@ body {
     display: grid;
     place-items: center;
     text-align: center;
-    padding: 4rem 1rem;
     z-index: 1;
     /* acima do fundo */
 }
