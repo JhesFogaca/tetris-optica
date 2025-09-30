@@ -95,6 +95,9 @@ const PERGUNTAS = [
 *  Estado do jogo
 * ===================== */
 const state = {
+    nivel: 1,          // começa no nível 1
+    totalNiveis: 2,
+    perguntasAtuais: [],   // 👈 range de perguntas do nível
     iPergunta: 0,
     iBloco: 0,
     pontos: 0,
@@ -102,12 +105,15 @@ const state = {
     acertos: 0,
     total: 0,
     caindo: null,        // referência ao elemento do bloco atual
-    velocidade: 50,     // px/seg (ajuste fino aqui)
+    velocidadeBase: 50,     // px/s padrão (antes era "velocidade")
+    velocidadeAtual: 50,    // px/s em uso no frame
+    fastDropping: false,    // está acelerando após decisão?     // px/seg (ajuste fino aqui)
     targetX: null,       // -1 esquerda, 0 centro, 1 direita
     animId: null,
     toque: { ativo: false, startX: 0, deslocX: 0 },
     pausado: false,
     lastTime: 0   // 👈 novo: guarda o timestamp do último frame usado
+
 };
 /* =====================
 /* =====================
@@ -120,7 +126,8 @@ const hudPontos = el('#hudPontos');
 const hudCombo = el('#hudCombo');
 const jogo = el('#jogo');
 const textoPerg = el('#textoPergunta');
-
+const falaBox = document.querySelector('.fala');
+const hudNivel = el('#hudNivel');
 
 const modalComo = el('#modalComo');
 const modalRanking = el('#modalRanking');
@@ -174,13 +181,18 @@ function renderRanking() {
 /* =====================
 * Loop & lógica
 * ===================== */
-function iniciarJogo() {
+/*function iniciarJogo() {
     // reset
     state.iPergunta = 0;
     state.iBloco = 0;
     state.pontos = 0;
     state.combo = 1;
     state.acertos = 0;
+    state.perguntasAtuais = perguntasDoNivel(state.nivel);
+    state.total = state.perguntasAtuais.reduce((acc, p) => acc + p.blocos.length, 0);
+    state.velocidadeBase = 50;  // ajuste fino aqui
+    state.velocidadeAtual = state.velocidadeBase;
+    state.fastDropping = false;
     state.total = PERGUNTAS.reduce((acc, p) => acc + p.blocos.length, 0);
     atualizarHUD();
 
@@ -188,27 +200,87 @@ function iniciarJogo() {
     // foco para teclado
     jogo.focus();
     proximaPergunta();
+}*/
+
+function iniciarNivel({ resetPontuacao = false } = {}) {
+    // define o conjunto do nível atual
+    state.perguntasAtuais = perguntasDoNivel(state.nivel);
+
+    // reset de índices e estado de queda
+    state.iPergunta = 0;
+    state.iBloco = 0;
+    state.combo = 1;
+    state.caindo = null;
+    state.velocidadeAtual = state.velocidadeBase;
+
+    // pontos/acertos: zera só no começo do NÍVEL 1
+    if (resetPontuacao) {
+        state.pontos = 0;
+        state.acertos = 0;
+    }
+
+    // total agora é só do nível (4 perguntas)
+    state.total = state.perguntasAtuais.reduce((acc, p) => acc + p.blocos.length, 0);
+    atualizarHUD();
+    jogo.focus();
+    proximaPergunta();
+}
+
+function perguntasDoNivel(nivel) {
+    const start = (nivel - 1) * 4;
+    const end = start + 4;
+    return PERGUNTAS.slice(start, start + 4);
+}
+
+function iniciarNivel({ resetPontuacao = false } = {}) {
+    state.perguntasAtuais = perguntasDoNivel(state.nivel);
+    state.iPergunta = 0;
+    state.iBloco = 0;
+    state.combo = 1;
+    state.caindo = null;
+    state.velocidadeAtual = state.velocidadeBase;
+
+    if (resetPontuacao) {
+        state.pontos = 0;
+        state.acertos = 0;
+    }
+
+    state.total = state.perguntasAtuais.reduce((acc, p) => acc + p.blocos.length, 0);
+    atualizarHUD();
+    jogo.focus();
+    proximaPergunta();
 }
 
 
 function atualizarHUD() {
-    hudPergunta.textContent = `${state.iPergunta + 1}/${PERGUNTAS.length}`;
-    const atual = PERGUNTAS[state.iPergunta];
+    hudPergunta.textContent = `${state.iPergunta + 1}/${state.perguntasAtuais.length || 4}`;
+    const atual = state.perguntasAtuais[state.iPergunta];
     const totalBlocos = atual?.blocos.length || 5;
     hudBloco.textContent = `${state.iBloco + 1}/${totalBlocos}`;
     hudPontos.textContent = state.pontos;
     hudCombo.textContent = `x${state.combo}`;
+    hudNivel.textContent = state.nivel; // 👈 mostra nível atual
 }
 
 
 function proximaPergunta() {
-    if (state.iPergunta >= PERGUNTAS.length) {
+    if (state.iPergunta >= state.perguntasAtuais.length) {
         return fimDeJogo();
     }
-    const atual = PERGUNTAS[state.iPergunta];
+    const atual = state.perguntasAtuais[state.iPergunta];
     textoPerg.textContent = atual.pergunta;
     state.iBloco = 0;
-    gerarBloco();
+
+    // 🔔 pulsar o balão de fala (não o HUD)
+    if (falaBox) {
+        falaBox.classList.remove('fala-pulse'); // reset
+        void falaBox.offsetWidth;               // força reflow para reiniciar animação
+        falaBox.classList.add('fala-pulse');    // aplica de novo
+    }
+    // 🕑 pequena pausa antes de começar a cair blocos
+    setTimeout(() => {
+        gerarBloco();
+    }, 2000); // ajuste o tempo
 }
 
 
@@ -217,7 +289,7 @@ function gerarBloco() {
     if (state.caindo) { state.caindo.remove(); state.caindo = null; }
 
 
-    const atual = PERGUNTAS[state.iPergunta];
+    const atual = state.perguntasAtuais[state.iPergunta];
     const item = atual.blocos[state.iBloco];
     if (!item) {
         // acabou os blocos desta pergunta
@@ -270,7 +342,7 @@ function startAnim() {
 
         // mover vertical
         const curTop = parseFloat(state.caindo.style.top);
-        const novoTop = curTop + state.velocidade * dt;
+        const novoTop = curTop + state.velocidadeAtual * dt;
         state.caindo.style.top = novoTop + 'px';
 
         // mover horizontal em direção ao target (snap suave, se usar easing faça aqui)
@@ -294,38 +366,41 @@ function startAnim() {
 
 function validarBloco() {
     if (!state.caindo) return;
+
     const correta = state.caindo.getAttribute('data-correta') === '1';
-    const lado = state.targetX; // -1 esq (Falso) / 1 dir (Verdadeiro) / 0 centro
+    const lado = state.targetX;
     let acertou = false;
 
+    if (lado === -1) acertou = !correta;
+    else if (lado === 1) acertou = !!correta;
+    else acertou = false;
 
-    if (lado === -1) acertou = !correta; // esquerda = Falso
-    else if (lado === 1) acertou = !!correta; // direita = Verdadeiro
-    else acertou = false; // deixou cair no centro: considera erro
-
+    const atual = state.perguntasAtuais[state.iPergunta];
+    const isLast = state.iBloco >= (atual.blocos.length - 1);
 
     if (acertou) {
         state.caindo.classList.add('acerto');
         state.acertos++;
-        // pontuação com combo
         const ganho = 10 * state.combo;
         state.pontos += ganho;
-        state.combo = Math.min(state.combo + 1, 5); // limite combo x5
+        state.combo = Math.min(state.combo + 1, 5);
+        if (isLast) { state.caindo.classList.add('brilha-final'); }
     } else {
         state.caindo.classList.add('erro');
-        state.combo = 1; // quebra o combo
+        state.combo = 1;
     }
 
-
     atualizarHUD();
-
-
-    // preparar próximo bloco
-    const atual = PERGUNTAS[state.iPergunta];
     state.iBloco++;
-    // atraso curto para feedback visual
-    setTimeout(gerarBloco, 240);
+
+    state.fastDropping = false;
+    state.velocidadeAtual = state.velocidadeBase;
+
+    const delay = (isLast && acertou) ? 800 : 240;
+    setTimeout(gerarBloco, delay);
 }
+
+
 /* =====================
 * Controles
 * ===================== */
@@ -339,6 +414,14 @@ function decidir(lado) {
         state.targetX = 1; // Verdadeiro
         state.caindo.classList.add('decisao-dir');
         state.caindo.classList.remove('decisao-esq');
+    } else {
+        return;
+    }
+
+    // 🚀 acelera a queda após a escolha (soft drop pós-decisão)
+    if (!state.fastDropping) {
+        state.fastDropping = true;
+        state.velocidadeAtual = state.velocidadeBase * 4; // fator 3x-6x; ajuste aqui
     }
 }
 
@@ -376,6 +459,14 @@ jogo.addEventListener('touchmove', (e) => {
 jogo.addEventListener('touchend', () => {
     state.toque.ativo = false;
 });
+const btnReiniciar = document.getElementById('btnReiniciar');
+btnReiniciar.addEventListener('click', () => {
+    // fecha ranking e recomeça do nível 1, zerando tudo
+    modalRanking.close();
+    state.nivel = 1;
+    iniciarNivel({ resetPontuacao: true });
+});
+
 
 const btnPause = document.getElementById("btnPause");
 btnPause.addEventListener("click", () => {
@@ -384,17 +475,43 @@ btnPause.addEventListener("click", () => {
     state.lastTime = performance.now(); // evita dt gigante ao retomar
 });
 
+
 /* =====================
 * Fim de jogo
 * ===================== */
 function fimDeJogo() {
     cancelAnimationFrame(state.animId);
     if (state.caindo) { state.caindo.remove(); state.caindo = null; }
+
     fimPontos.textContent = state.pontos;
     fimAcertos.textContent = state.acertos;
     fimTotal.textContent = state.total;
+
+    if (state.nivel < state.totalNiveis) {
+        // resultado parcial
+        modalFim.querySelector("h2").textContent = "Fim do Nível " + state.nivel;
+        document.getElementById("formSalvar").style.display = "none";
+        document.getElementById("btnJogarNovamente").textContent = "Avançar para o Nível " + (state.nivel + 1);
+    } else {
+        // resultado final
+        modalFim.querySelector("h2").textContent = "Resultado Final";
+        document.getElementById("formSalvar").style.display = "block";
+        document.getElementById("btnJogarNovamente").textContent = "Jogar novamente";
+    }
+
     modalFim.showModal();
 }
+
+el('#btnJogarNovamente')?.addEventListener('click', () => {
+    modalFim.close();
+    if (state.nivel < state.totalNiveis) {
+        state.nivel += 1;
+        iniciarNivel({ resetPontuacao: false }); // 👈 mantém pontos para o nível 2
+    } else {
+        state.nivel = 1;
+        iniciarNivel({ resetPontuacao: true });  // 👈 recomeça do zero
+    }
+});
 
 
 // salvar ranking
@@ -411,4 +528,4 @@ formSalvar.addEventListener('submit', (e) => {
 
 
 // Boot
-window.addEventListener('load', iniciarJogo);
+window.addEventListener('load', () => iniciarNivel({ resetPontuacao: true }));

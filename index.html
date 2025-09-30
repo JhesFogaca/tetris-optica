@@ -27,8 +27,10 @@
     <main id="app" role="main">
         <section class="hud" aria-live="polite">
             <button id="btnPause" class="btn ghost">Pausar</button>
-            <div class="hud__item"><strong>Pergunta:</strong> <span id="hudPergunta">1/8</span></div>
+            <div class="hud__item hud__item--pergunta"><strong>Pergunta:</strong> <span id="hudPergunta">1/8</span>
+            </div>
             <div class="hud__item"><strong>Bloco:</strong> <span id="hudBloco">1/5</span></div>
+            <div class="hud__item"><strong>Nível:</strong> <span id="hudNivel">0</span></div>
             <div class="hud__item"><strong>Pontos:</strong> <span id="hudPontos">0</span></div>
             <div class="hud__item" hidden><strong>Combo:</strong> <span id="hudCombo">x1</span></div>
         </section>
@@ -73,9 +75,10 @@
             <strong>direita</strong>. Se for <strong>Falso</strong>, para a <strong>esquerda</strong>.
         </p>
         <ul>
-            <li>8 perguntas (patologias comuns)</li>
-            <li>5 blocos por pergunta (afirmações diferentes)</li>
+            <li>4 perguntas por nível </li>
+            <li>5 blocos por pergunta </li>
             <li>Pontuação com combo: acertos em sequência valem mais</li>
+            <li>Salve seu nome no Ranking</li>
         </ul>
         <form method="dialog"><button class="btn">Fechar</button></form>
     </dialog>
@@ -84,7 +87,9 @@
     <dialog id="modalRanking" class="modal">
         <h2>Ranking da Loja</h2>
         <ol id="listaRanking" class="ranking"></ol>
-        <form method="dialog"><button class="btn">Fechar</button></form>
+        <form method="dialog"><button class="btn">Fechar</button>
+            <button id="btnReiniciar" class="btn" type="button">Reiniciar jogo</button>
+        </form>
     </dialog>
 
 
